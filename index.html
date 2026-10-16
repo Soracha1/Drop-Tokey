@@ -38,43 +38,80 @@
         <button onclick="withdraw()" style="background: #dc3545;">Withdraw</button>
     </div>
 </div>
+
 <script>
-    const contractAddress = "0xDb3B75Cf89548bF610D472317F64f6d1BC8b90f8";
+    // ⚠️ อย่าลืมเปลี่ยน Contract Address ตรงนี้ให้เป็นอันใหม่หลัง Deploy 
+    const contractAddress = "0xd31D69E4460dB5CB75715De61581FE36c741cE7F"; 
+    
     const contractABI = [
         "function deposit() public payable",
         "function withdraw(uint amount) public",
-        "function checkBlance() public view returns (uint balance)"
+        "function checkBalance() public view returns (uint balance)"
     ];
     let provider, signer, bankContract;
+
     async function connectWallet() {
         if (typeof window.ethereum !== 'undefined') {
-            await ethereum.request({ method: 'eth_requestAccounts' });
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-            signer = provider.getSigner();
-            bankContract = new ethers.Contract(contractAddress, contractABI, signer);
-            const address = await signer.getAddress();
-            document.getElementById("walletAddress").innerText = "Wallet: " + address;
-            document.getElementById("connectBtn").innerText = "Connected";
-            getWalletBalance();
-        } else { alert("กรุณาติดตั้ง MetaMask!"); }
+            try {
+                await ethereum.request({ method: 'eth_requestAccounts' });
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+                bankContract = new ethers.Contract(contractAddress, contractABI, signer);
+                const address = await signer.getAddress();
+                document.getElementById("walletAddress").innerText = "Wallet: " + address;
+                document.getElementById("connectBtn").innerText = "Connected";
+                getWalletBalance();
+            } catch (error) {
+                console.error(error);
+                alert("การเชื่อมต่อกระเป๋าเงินล้มเหลว");
+            }
+        } else { 
+            alert("กรุณาติดตั้ง MetaMask!"); 
+        }
     }
+
     async function getWalletBalance() {
-        const balance = await bankContract.checkBlance();
-        document.getElementById("userBalance").innerText = ethers.utils.formatEther(balance);
+        try {
+            if (!bankContract) return;
+            const balance = await bankContract.checkBalance();
+            document.getElementById("userBalance").innerText = ethers.utils.formatEther(balance);
+        } catch (error) {
+            console.error("Error fetching balance:", error);
+        }
     }
+
     async function deposit() {
-        const amount = document.getElementById("depositAmount").value;
-        const tx = await bankContract.deposit({ value: ethers.utils.parseEther(amount) });
-        await tx.wait();
-        alert("ฝากเงินสำเร็จ!");
-        getWalletBalance();
+        try {
+            const amount = document.getElementById("depositAmount").value;
+            if (!amount || amount <= 0) {
+                alert("กรุณากรอกจำนวน ETH ที่ต้องการฝากให้ถูกต้อง");
+                return;
+            }
+            const tx = await bankContract.deposit({ value: ethers.utils.parseEther(amount) });
+            await tx.wait();
+            alert("ฝากเงินสำเร็จ!");
+            getWalletBalance();
+        } catch (error) {
+            console.error(error);
+            alert("ฝากเงินไม่สำเร็จ: " + (error.data?.message || error.message));
+        }
     }
+
     async function withdraw() {
-        const amount = document.getElementById("withdrawAmount").value;
-        const tx = await bankContract.withdraw(ethers.utils.parseEther(amount));
-        await tx.wait();
-        alert("ถอนเงินสำเร็จ!");
-        getWalletBalance();
+        try {
+            const amount = document.getElementById("withdrawAmount").value;
+            if (!amount || amount <= 0) {
+                alert("กรุณากรอกจำนวน ETH ที่ต้องการถอนให้ถูกต้อง");
+                return;
+            }
+            const tx = await bankContract.withdraw(ethers.utils.parseEther(amount));
+            await tx.wait();
+            alert("ถอนเงินสำเร็จ!");
+            getWalletBalance();
+        } catch (error) {
+            console.error(error);
+            alert("ถอนเงินไม่สำเร็จ (ยอดเงินในธนาคารอาจไม่พอ)");
+        }
     }
 </script>
 </body>
