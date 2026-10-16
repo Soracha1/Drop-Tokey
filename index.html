@@ -40,7 +40,7 @@
 </div>
 
 <script>
-    // ⚠️ อย่าลืมเปลี่ยน Contract Address ตรงนี้ให้เป็นอันใหม่หลัง Deploy 
+    // Contract Address ล่าสุดที่คุณ Deploy บน Sepolia
     const contractAddress = "0xd31D69E4460dB5CB75715De61581FE36c741cE7F"; 
     
     const contractABI = [
@@ -57,10 +57,13 @@
                 provider = new ethers.providers.Web3Provider(window.ethereum);
                 signer = provider.getSigner();
                 bankContract = new ethers.Contract(contractAddress, contractABI, signer);
+                
                 const address = await signer.getAddress();
                 document.getElementById("walletAddress").innerText = "Wallet: " + address;
                 document.getElementById("connectBtn").innerText = "Connected";
-                getWalletBalance();
+                
+                // ดึงยอดเงินหลังจากเชื่อมต่อสำเร็จ
+                await getWalletBalance();
             } catch (error) {
                 console.error(error);
                 alert("การเชื่อมต่อกระเป๋าเงินล้มเหลว");
@@ -82,6 +85,10 @@
 
     async function deposit() {
         try {
+            if (!bankContract) {
+                alert("กรุณากด Connect Wallet ก่อนทำรายการ");
+                return;
+            }
             const amount = document.getElementById("depositAmount").value;
             if (!amount || amount <= 0) {
                 alert("กรุณากรอกจำนวน ETH ที่ต้องการฝากให้ถูกต้อง");
@@ -99,6 +106,10 @@
 
     async function withdraw() {
         try {
+            if (!bankContract) {
+                alert("กรุณากด Connect Wallet ก่อนทำรายการ");
+                return;
+            }
             const amount = document.getElementById("withdrawAmount").value;
             if (!amount || amount <= 0) {
                 alert("กรุณากรอกจำนวน ETH ที่ต้องการถอนให้ถูกต้อง");
@@ -116,3 +127,38 @@
 </script>
 </body>
 </html>
+
+<!-- 
+==================================================
+ส่วนของ Smart Contract (สำหรับใช้อ้างอิงใน Remix IDE)
+==================================================
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract Bank {
+    mapping (address => uint) _balances;
+    
+    event Deposit(address indexed owner, uint amount);
+    event Withdraw(address indexed owner, uint amount);
+
+    function deposit() public payable {
+        require(msg.value > 0, "Deposit money is zero");
+        _balances[msg.sender] += msg.value;
+        emit Deposit(msg.sender, msg.value);
+    }
+
+    function withdraw(uint amount) public {
+        require(amount > 0 && amount <= _balances[msg.sender], "not enough money");
+        _balances[msg.sender] -= amount;
+        
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        require(success, "Transfer failed.");
+
+        emit Withdraw(msg.sender, amount);
+    }
+
+    function checkBalance() public view returns (uint balance) {
+        return _balances[msg.sender];
+    }
+}
+-->
