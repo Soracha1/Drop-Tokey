@@ -1,1 +1,81 @@
-
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>Web3 Bank DApp - Assignment 5</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 400px; }
+        h2 { color: #333; text-align: center; }
+        .info { background: #eef2f7; padding: 10px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
+        .box { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { width: 100%; padding: 10px; margin-top: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        #connectBtn { background: #28a745; margin-bottom: 15px; }
+        .balance-box { font-size: 18px; font-weight: bold; color: #333; text-align: center; margin: 15px 0; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Web3 Bank DApp</h2>
+    <div class="info">
+        <b>รหัสนักศึกษา:</b> 66038668 <br>
+        <b>ชื่อ-สกุล:</b> สรชา ชายไพฑูรย์
+    </div>
+    <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+    <div id="walletAddress" style="font-size: 12px; color: gray; text-align: center; margin-bottom: 15px;">Wallet: Not Connected</div>
+    <div class="balance-box">Current Balance: <span id="userBalance">0</span> ETH</div>
+    <div class="box">
+        <label>จำนวน ETH ที่ต้องการฝาก (Deposit):</label>
+        <input type="number" id="depositAmount" step="0.01" placeholder="0.1">
+        <button onclick="deposit()">Deposit</button>
+    </div>
+    <div class="box">
+        <label>จำนวน ETH ที่ต้องการถอน (Withdraw):</label>
+        <input type="number" id="withdrawAmount" step="0.01" placeholder="0.1">
+        <button onclick="withdraw()" style="background: #dc3545;">Withdraw</button>
+    </div>
+</div>
+<script>
+    const contractAddress = "วาง_Contract_Address_ที่ได้จากการ_Deploy_ตรงนี้";
+    const contractABI = [
+        "function deposit() public payable",
+        "function withdraw(uint amount) public",
+        "function checkBlance() public view returns (uint balance)"
+    ];
+    let provider, signer, bankContract;
+    async function connectWallet() {
+        if (typeof window.ethereum !== 'undefined') {
+            await ethereum.request({ method: 'eth_requestAccounts' });
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            signer = provider.getSigner();
+            bankContract = new ethers.Contract(contractAddress, contractABI, signer);
+            const address = await signer.getAddress();
+            document.getElementById("walletAddress").innerText = "Wallet: " + address;
+            document.getElementById("connectBtn").innerText = "Connected";
+            getWalletBalance();
+        } else { alert("กรุณาติดตั้ง MetaMask!"); }
+    }
+    async function getWalletBalance() {
+        const balance = await bankContract.checkBlance();
+        document.getElementById("userBalance").innerText = ethers.utils.formatEther(balance);
+    }
+    async function deposit() {
+        const amount = document.getElementById("depositAmount").value;
+        const tx = await bankContract.deposit({ value: ethers.utils.parseEther(amount) });
+        await tx.wait();
+        alert("ฝากเงินสำเร็จ!");
+        getWalletBalance();
+    }
+    async function withdraw() {
+        const amount = document.getElementById("withdrawAmount").value;
+        const tx = await bankContract.withdraw(ethers.utils.parseEther(amount));
+        await tx.wait();
+        alert("ถอนเงินสำเร็จ!");
+        getWalletBalance();
+    }
+</script>
+</body>
+</html>
